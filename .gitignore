@@ -8,3 +8,6 @@
 dep*.txt
 /bin/
 .settings
+.classpath
+.project
+*~

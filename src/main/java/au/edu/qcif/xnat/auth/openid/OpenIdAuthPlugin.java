@@ -84,6 +84,11 @@ public class OpenIdAuthPlugin implements XnatSecurityExtension {
 	private void loadProps() {
 		if (_props == null && _locator != null) {
 			final Map<String, ProviderAttributes> openIdProviders = _locator.getProviderDefinitionsByType("openid");
+			if (null == openIdProviders) {
+				throw new RuntimeException(
+                        "This plugin requires one OpenID provider but found none!! " +
+ 						"Please verify properties file in {xnat.home}/config/auth/xxx-provider.properties.");
+			}
 			if (openIdProviders.size() == 0) {
 				throw new RuntimeException("You must configure an OpenID provider");
 			}
