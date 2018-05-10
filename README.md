@@ -28,7 +28,7 @@ When you have deployed the specific version of XNAT Web, you will need to deploy
 
 To build the XNAT OpenID authentication provider plugin:
 
-1. If you haven't already, clone [this repository](https://github.com/drofe/xnat-openid-auth-plugin.git) and cd to the newly cloned folder.
+1. If you haven't already, clone [this repository](https://github.com/PacificAnalytics/xnat-openid-auth-plugin.git) and cd to the newly cloned folder.
 
 1. Build the plugin:
 
@@ -58,7 +58,7 @@ This plugin will use any entries located in any of those properties files where 
 The following properties control the plugin:
 
 ### enabled
-Comma delimited list of provide ids, currently tested with Google `google` and AAF `aaf`.
+Comma delimited list of provide ids, currently tested with Google `google`, AAF `aaf` and KeyCloak `keycloak`.
 
 ### siteUrl
 The main domain, needed to build the full `preEstablishedRedirUri`
