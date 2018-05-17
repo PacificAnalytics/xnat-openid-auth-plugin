@@ -20,6 +20,7 @@ package au.edu.qcif.xnat.auth.openid;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.nrg.framework.annotations.XnatPlugin;
+import org.nrg.xnat.security.XnatLogoutSuccessHandler;
 import org.nrg.xnat.security.XnatSecurityExtension;
 import org.nrg.xnat.security.provider.AuthenticationProviderConfigurationLocator;
 import org.nrg.xnat.security.provider.ProviderAttributes;
@@ -59,6 +60,7 @@ import java.util.Properties;
 @Slf4j
 public class OpenIdAuthPlugin implements XnatSecurityExtension {
 
+
 	@Autowired
 	public void setAuthenticationProviderConfigurationLocator(
 			final AuthenticationProviderConfigurationLocator locator) {
@@ -78,7 +80,7 @@ public class OpenIdAuthPlugin implements XnatSecurityExtension {
 
 	public String getProperty(String providerId, String propName) {
 		loadProps();
-		return _props.getProperty(_id + "." + providerId + "." + propName);
+		return _props.getProperty(getPropertyPrefix(providerId) + propName);
 	}
 
 	private void loadProps() {
@@ -104,6 +106,15 @@ public class OpenIdAuthPlugin implements XnatSecurityExtension {
 		}
 	}
 
+	private static String getPropertyPrefix(String providerId) {
+        return _id + "." + providerId + ".";
+    }
+
+    //TODO: Fix this to handle more than one configured provider. Assumes only one is configured
+    private static String getPropertyPrefix() {
+	    return getPropertyPrefix(getConfig().getProperty("enabled"));
+    }
+
 	public Properties getProps() {
 		return _props;
 	}
@@ -114,6 +125,7 @@ public class OpenIdAuthPlugin implements XnatSecurityExtension {
 		}
 		return _enabledProviders;
 	}
+
 
 	@Bean
 	@Scope("prototype")
@@ -130,7 +142,11 @@ public class OpenIdAuthPlugin implements XnatSecurityExtension {
 	}
 
 	private AuthenticationProviderConfigurationLocator _locator;
-	private static String _id = "openid";
+    private static String LOGOUT_URL;
+	private static final String _id = "openid";
+	private static final String _logoutUrlKey = "logoutUrl";
+    private static final String _defaultSecureLogoutUrl = "/app/template/Login.vm";
+    private static final String _defaultOpenLogoutUrl = "/";
 	private Properties _props;
 	private String[] _enabledProviders;
 	private static OpenIdAuthPlugin _inst;
@@ -206,4 +222,43 @@ public class OpenIdAuthPlugin implements XnatSecurityExtension {
 		return details;
 	}
 
+	@Bean
+	public XnatLogoutSuccessHandler logoutSuccessHandler() {
+		return new OpenIdLogoutSuccessHandler(true, "/", _defaultSecureLogoutUrl);
+	}
+
+	//Package private, used in LogoutSuccessHandler.
+    //TODO: Add better logic here, if possible, to identify if current session/user was logged in via OpenID provider.
+    static String getLogoutUrl(boolean requireLogin) {
+        return OpenIdAuthPlugin.isOpenIDProviderEnabled() ?
+                getOpenIDLogoutUrl(requireLogin) :
+                getXnatLogutUrl(requireLogin);
+    }
+
+    private static String getOpenIDLogoutUrl(boolean requireLogin) {
+	    if (null == LOGOUT_URL) {
+            String logoutUrl = getConfig().getProperty(getPropertyPrefix() + _logoutUrlKey);
+            if (null != logoutUrl) {
+                String redirUrl = getTrimmedUrl(getConfig().getProperty("siteUrl"), getXnatLogutUrl(requireLogin));
+                LOGOUT_URL = (logoutUrl + "?redirect_uri=" + redirUrl);
+            }
+		}
+		return null == LOGOUT_URL ? getXnatLogutUrl(requireLogin) : LOGOUT_URL;
+	}
+
+	private static String getTrimmedUrl(String site, String location) {
+	    if (site.endsWith("/") && location.startsWith("/")) {
+	        location = location.replaceFirst("/", "");
+        }
+        return site + location;
+    }
+
+	private static boolean isOpenIDProviderEnabled() {
+	    String enabled = getConfig().getProperty("enabled");
+	    return null != enabled && !enabled.isEmpty();
+    }
+
+    private static String getXnatLogutUrl(boolean requireLogin) {
+	    return requireLogin ? _defaultSecureLogoutUrl : _defaultOpenLogoutUrl;
+    }
 }
